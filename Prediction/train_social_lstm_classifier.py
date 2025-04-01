@@ -15,8 +15,8 @@ epochs = 10
 learning_rate = 0.001
 
 # ==== Load Data ====
-train_data = torch.load("/Users/anzhunie/Desktop/Pedestrian_Training/Prediction/train_social_lstm.pt")
-test_data = torch.load("/Users/anzhunie/Desktop/Pedestrian_Training/Prediction/test_social_lstm.pt")
+train_data = torch.load("/Users/anzhunie/Desktop/Pedestrian_Training/Prediction/train_social_lstm_full.pt")
+test_data = torch.load("/Users/anzhunie/Desktop/Pedestrian_Training/Prediction/test_social_lstm_full.pt")
 
 # ==== Initialize Model ====
 model = SocialLSTMClassifier(

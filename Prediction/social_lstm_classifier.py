@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class SocialLSTMClassifier(nn.Module):
-    def __init__(self, input_size=3, hidden_size=64, grid_size=(4, 4), neighborhood_size=4.0, dropout=0.1, observed=15):
+    def __init__(self, input_size, hidden_size=64, grid_size=(4, 4), neighborhood_size=4.0, dropout=0.1, observed=15):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
