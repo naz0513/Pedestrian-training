@@ -54,39 +54,33 @@ class SocialLSTMClassifier(nn.Module):
         return social_tensor.view(1, -1)
 
     def forward(self, observed_trajectory_target, observed_trajectory_others, neighbor_mask=None):
-        obs_len, _, _ = observed_trajectory_target.size()
-        _, N_others, _ = observed_trajectory_others.size()
+        obs_len = len(observed_trajectory_others)
 
-        hidden_target = torch.zeros(1, self.hidden_size, device=observed_trajectory_target.device)
-        cell_target = torch.zeros(1, self.hidden_size, device=observed_trajectory_target.device)
+        hidden_target = torch.zeros(1, self.hidden_size, device=observed_trajectory_target[0].device)
+        cell_target = torch.zeros(1, self.hidden_size, device=observed_trajectory_target[0].device)
 
-        if N_others > 0:
-            hidden_others = torch.zeros(N_others, self.hidden_size, device=observed_trajectory_others.device)
-            cell_others = torch.zeros(N_others, self.hidden_size, device=observed_trajectory_others.device)
-        else:
-            hidden_others = None
-            cell_others = None
+        for t in range(obs_len):
+            target_input = observed_trajectory_target[t].unsqueeze(0)  # shape: [1, F]
+            target_pos = target_input[:, :2]  # shape: [1, 2]
 
-        for t in range(self.obs_len):
-            target_input = observed_trajectory_target[t, 0, :]           # [7]
-            target_pos = target_input[:2].unsqueeze(0)                   # [1, 2]
-            hidden_target, cell_target = self.lstm_cell(target_input.unsqueeze(0), (hidden_target, cell_target))
+            hidden_target, cell_target = self.lstm_cell(target_input, (hidden_target, cell_target))
             hidden_target = self.dropout(hidden_target)
 
-            if N_others > 0:
-                others_input = observed_trajectory_others[t, :, :]       # [N, 7]
-                others_pos = others_input[:, :2]                         # [N, 2]
+            others_input = observed_trajectory_others[t]  # shape: [N_i, F]
+            if others_input.shape[0] > 0:
+                others_pos = others_input[:, :2]
+                hidden_others = torch.zeros(others_input.shape[0], self.hidden_size, device=others_input.device)
+                cell_others = torch.zeros(others_input.shape[0], self.hidden_size, device=others_input.device)
+
                 hidden_others, cell_others = self.lstm_cell(others_input, (hidden_others, cell_others))
                 hidden_others = self.dropout(hidden_others)
 
-                social_tensor = self.get_social_grid(
-                    hidden_others, others_pos, N_others, reference_pos=target_pos,
-                    mask=neighbor_mask[t] if neighbor_mask is not None else None
-                )
+                mask_t = neighbor_mask[t] if neighbor_mask is not None else None
+                social_tensor = self.get_social_grid(hidden_others, others_pos, others_input.shape[0], target_pos, mask=mask_t)
                 social_context = self.social_pool_mlp(social_tensor)
             else:
                 social_context = torch.zeros_like(hidden_target)
 
             combined = hidden_target + social_context
 
-        return self.classifier(combined)  # Final classification output
+        return self.classifier(combined)
